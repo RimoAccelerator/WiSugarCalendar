@@ -551,6 +551,13 @@
                 max-width: calc(100vw - 70px);
                 box-sizing: border-box;
             }
+            .single-month-view .month {
+                width: calc(100vw - 70px); /* 移动端单月视图也占满宽度 */
+                max-width: calc(100vw - 70px);
+            }
+            .single-month-view .day {
+                min-height: 80px; /* 移动端单月视图日期格子高度适中 */
+            }
             .days-header {
                 display: grid;
                 grid-template-columns: repeat(7, 1fr);
