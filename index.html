@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiSugar Calendar</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+        }
+
+        body {
+            padding: 20px;
+            background-color: #f5f5f5;
+            border: 15px solid transparent;
+            border-image: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 30px,
+                #fff 30px,
+                #fff 60px
+            ) 15;
+            position: relative;
+        }
+
+        /* 使用伪元素创建柔和的背景图片 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('imgs/Wisugar-logo.webp');
+            background-repeat: no-repeat;
+            background-position: center center;
+            background-size: 35% auto;
+            background-attachment: fixed;
+            opacity: 0.6;
+            z-index: -1;
+            pointer-events: none;
+            filter: blur(0.5px);
+        }
+
+
+        .candy-border-left,
+        .candy-border-right {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            width: 30px;
+            font-size: 24px;
+            line-height: 30px;
+            overflow: hidden;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 9999;
+            writing-mode: vertical-lr;
+            opacity: 0.3; /* 降低透明度 */
+            transition: opacity 0.3s ease;
+        }
+
+        .candy-border-left {
+            left: 0;
+        }
+
+        .candy-border-right {
+            right: 0;
+        }
+
+        .footer-message {
+            text-align: center;
+            padding: 40px 20px 20px;
+            font-size: 24px;
+            color: #666;
+            font-style: italic;
+            margin-top: 40px;
+            background: linear-gradient(180deg, transparent 0%, rgba(76, 175, 80, 0.05) 100%);
+        }
+
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .controls button:hover {
+            background-color: #45a049;
+        }
+
+        .controls select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .calendar-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .month {
+            width: 100%;
+            max-width: 500px;
+            background-color: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .month-header {
+            background-color: rgba(76, 175, 80, 0.5);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .days-header {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            background-color: rgba(241, 241, 241, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .days-header div {
+            padding: 8px;
+        }
+
+        .days-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-gap: 1px;
+            background-color: rgba(238, 238, 238, 0.3);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .day {
+            position: relative;
+            padding: 10px;
+            min-height: 80px;
+            min-width: 60px;
+            background-color: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            transition: all 0.3s;
+        }
+
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: large;
+        }
+
+        .day.is-event {
+            background-color: rgba(200, 230, 201, 0.4); /* Green background for isEvent=true */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.canceled-event {
+            background-color: rgba(224, 224, 224, 0.4); /* Gray background for canceledEvent=true */
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day .special-event {
+            font-weight: bold;
+            color: #d32f2f;
+            font-size: small;
+        }
+
+        .day .event-place {
+            font-size: 0.3em;
+            color: #555;
+        }
+
+        .day.has-links {
+            cursor: pointer;
+        }
+
+        .day.has-links:hover {
+            box-shadow: 0 0 15px rgba(76, 175, 80, 0.7);
+            z-index: 10;
+        }
+
+        .day.has-links:hover::before {
+            content: "点击查看链接";
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 3px 6px;
+            border-radius: 3px;
+            font-size: 0.7em;
+        }
+
+        /* Birthday Special Styles */
+        .day.birthday-zaki {
+            border: 3px solid #FF9800;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(255, 152, 0, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ruri {
+            border: 3px solid #2196F3;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ue {
+            border: 3px solid #4CAF50;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-kirarin {
+            border: 3px solid #ff3176dc;
+            background: linear-gradient(135deg, rgba(255, 49, 118, 0.2) 0%, rgba(255, 49, 118, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-netanuki {
+            border: 3px solid #9C27B0;
+            background: linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(156, 39, 176, 0.1) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .day.birthday-mi {
+            border: 3px solid #fffd81;
+            background: linear-gradient(135deg, rgba(255, 253, 124, 0.2) 0%, rgba(255, 239, 16, 0.5) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Combined birthday styles - dual colors */
+        .day.birthday-zaki.birthday-ruri,
+        .day.birthday-zaki.birthday-ue,
+        .day.birthday-zaki.birthday-kirarin,
+        .day.birthday-zaki.birthday-netanuki,
+        .day.birthday-ruri.birthday-ue,
+        .day.birthday-ruri.birthday-kirarin,
+        .day.birthday-ruri.birthday-netanuki,
+        .day.birthday-ue.birthday-kirarin,
+        .day.birthday-ue.birthday-netanuki,
+        .day.birthday-kirarin.birthday-netanuki {
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .day.birthday-zaki.birthday-ruri {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #FF9800 0%, #FF9800 50%, #2196F3 50%, #2196F3 100%) 1;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(33, 150, 243, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-zaki.birthday-ue {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #FF9800 0%, #FF9800 50%, #4CAF50 50%, #4CAF50 100%) 1;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(76, 175, 80, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-zaki.birthday-kirarin {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #FF9800 0%, #FF9800 50%, #ff3176dc 50%, #ff3176dc 100%) 1;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(255, 49, 118, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-zaki.birthday-netanuki {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #FF9800 0%, #FF9800 50%, #9C27B0 50%, #9C27B0 100%) 1;
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(156, 39, 176, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ruri.birthday-ue {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #2196F3 0%, #2196F3 50%, #4CAF50 50%, #4CAF50 100%) 1;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(76, 175, 80, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ruri.birthday-kirarin {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #2196F3 0%, #2196F3 50%, #ff3176dc 50%, #ff3176dc 100%) 1;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(255, 49, 118, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ruri.birthday-netanuki {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #2196F3 0%, #2196F3 50%, #9C27B0 50%, #9C27B0 100%) 1;
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(156, 39, 176, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ue.birthday-kirarin {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #4CAF50 0%, #4CAF50 50%, #ff3176dc 50%, #ff3176dc 100%) 1;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(255, 49, 118, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-ue.birthday-netanuki {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #4CAF50 0%, #4CAF50 50%, #9C27B0 50%, #9C27B0 100%) 1;
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(156, 39, 176, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .day.birthday-kirarin.birthday-netanuki {
+            border: 3px solid;
+            border-image: linear-gradient(135deg, #ff3176dc 0%, #ff3176dc 50%, #9C27B0 50%, #9C27B0 100%) 1;
+            background: linear-gradient(135deg, rgba(255, 49, 118, 0.2) 0%, rgba(156, 39, 176, 0.2) 100%);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Combined birthday styles - triple colors */
+        .day.birthday-multi-3 {
+            border: 3px solid;
+            background: repeating-linear-gradient(
+                135deg,
+                rgba(255, 152, 0, 0.15),
+                rgba(255, 152, 0, 0.15) 33.33%,
+                rgba(33, 150, 243, 0.15) 33.33%,
+                rgba(33, 150, 243, 0.15) 66.66%,
+                rgba(76, 175, 80, 0.15) 66.66%,
+                rgba(76, 175, 80, 0.15) 100%
+            );
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* Combined birthday styles - four or more colors */
+        .day.birthday-multi-4plus {
+            border: 3px solid;
+            background: repeating-linear-gradient(
+                135deg,
+                rgba(255, 152, 0, 0.15) 0px,
+                rgba(255, 152, 0, 0.15) 10px,
+                rgba(33, 150, 243, 0.15) 10px,
+                rgba(33, 150, 243, 0.15) 20px,
+                rgba(76, 175, 80, 0.15) 20px,
+                rgba(76, 175, 80, 0.15) 30px,
+                rgba(255, 49, 118, 0.15) 30px,
+                rgba(255, 49, 118, 0.15) 40px
+            );
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .social-icons {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            display: flex;
+            gap: 3px;
+        }
+
+        .social-icon {
+            width: 16px;
+            height: 16px;
+            object-fit: contain;
+        }
+
+        @media (max-width: 768px) {
+            .social-icon {
+                width: 14px;
+                height: 14px;
+            }
+        }
+
+        .empty {
+            background-color: rgba(249, 249, 249, 0.3);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .single-month-view .month {
+            max-width: 50%;
+            background-color: rgba(255, 255, 255, 0.3) !important;
+            backdrop-filter: blur(15px) saturate(180%);
+            -webkit-backdrop-filter: blur(15px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .single-month-view .day {
+            min-height: 120px;
+            background-color: rgba(255, 255, 255, 0.25) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .single-month-view .day.is-event {
+            background-color: rgba(200, 230, 201, 0.4) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .single-month-view .day.canceled-event {
+            background-color: rgba(224, 224, 224, 0.4) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        .single-month-view .days-header {
+            background-color: rgba(241, 241, 241, 0.4) !important;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .single-month-view .days-grid {
+            background-color: rgba(238, 238, 238, 0.3) !important;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        .single-month-view .empty {
+            background-color: rgba(249, 249, 249, 0.3) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+
+        /* 单月视图下的月份标题也添加磨砂效果和半透明 */
+        .single-month-view .month-header {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(76, 175, 80, 0.5) !important;
+        }
+
+        /* 单月视图下月份标题背景半透明 */
+        .single-month-view .month-header.year-2022,
+        .single-month-view .month-header.year-2023,
+        .single-month-view .month-header.year-2024,
+        .single-month-view .month-header.year-2025 {
+            background-color: rgba(255, 205, 240, 0.5) !important;
+        }
+
+        .single-month-view .month-header.month-1 {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.7) 0%, rgba(255, 238, 230, 0.6) 100%) !important;
+        }
+
+        .single-month-view .month-header.month-4 {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.7) 0%, rgba(200, 230, 255, 0.6) 100%) !important;
+        }
+
+        .single-month-view .month-header.month-5 {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.7) 0%, rgba(76, 175, 79, 0.3) 100%) !important;
+        }
+
+        .single-month-view .month-header.month-6 {
+            background: linear-gradient(135deg, rgba(255, 49, 118, 0.7) 0%, rgba(255, 173, 201, 0.6) 100%) !important;
+        }
+
+        .single-month-view .month-header.year-2023.month-7 {
+            background: linear-gradient(135deg, rgba(156, 39, 176, 0.7) 0%, rgba(155, 39, 176, 0.3) 100%) !important;
+        }
+
+        /* 确保单月视图下所有生日样式都有磨砂效果 */
+        .single-month-view .day.birthday-zaki,
+        .single-month-view .day.birthday-ruri,
+        .single-month-view .day.birthday-ue,
+        .single-month-view .day.birthday-kirarin,
+        .single-month-view .day.birthday-netanuki,
+        .single-month-view .day.birthday-mi,
+        .single-month-view .day.birthday-zaki.birthday-ruri,
+        .single-month-view .day.birthday-zaki.birthday-ue,
+        .single-month-view .day.birthday-zaki.birthday-kirarin,
+        .single-month-view .day.birthday-zaki.birthday-netanuki,
+        .single-month-view .day.birthday-ruri.birthday-ue,
+        .single-month-view .day.birthday-ruri.birthday-kirarin,
+        .single-month-view .day.birthday-ruri.birthday-netanuki,
+        .single-month-view .day.birthday-ue.birthday-kirarin,
+        .single-month-view .day.birthday-ue.birthday-netanuki,
+        .single-month-view .day.birthday-kirarin.birthday-netanuki,
+        .single-month-view .day.birthday-multi-3,
+        .single-month-view .day.birthday-multi-4plus {
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+
+        @media (max-width: 768px) {
+            .month {
+                max-width: 100%;
+            }
+            .day {
+                min-height: 60px;
+                padding: 5px;
+            }
+            .day-number {
+                font-size: 0.9em;
+            }
+            .day .special-event,
+            .day .event-place {
+                font-size: 0.7em;
+            }
+            .footer-message {
+                font-size: 16px;
+                padding: 30px 15px 15px;
+            }
+        }
+
+        /* Year-specific month header colors */
+        .month-header.year-2022 {
+            background-color: #ffcdf0; 
+            font-size:large;
+            font-weight: 200;
+            font-weight: bolder;
+        }
+        
+        .month-header.year-2023 {
+            background-color: #ffcdf0;
+            font-size:large;
+            font-weight: 200;
+            font-weight: bolder;
+        }
+        
+        .month-header.year-2023.month-7 {
+            background: linear-gradient(135deg, #9C27B0 0%, #9b27b04f 100%);
+        }
+        
+        .month-header.year-2024 {
+            background-color: #ffcdf0;
+            font-size:large;
+            font-weight: 200;
+            font-weight: bolder;
+        }
+        
+        .month-header.year-2025 {
+            background-color: #ffcdf0;
+            font-size:large;
+            font-weight: 200;
+            font-weight: bolder;
+        }
+
+        /* Month-specific header colors (override year styles) */
+        .month-header.month-1 {
+            background: linear-gradient(135deg, rgba(255, 152, 0, 0.7) 0%, rgba(255, 238, 230, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }   /* 1月: 橙色 */
+        .month-header.month-4 {
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.7) 0%, rgba(200, 230, 255, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }   /* 4月: 蓝色 */
+        .month-header.month-5 {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.7) 0%, rgba(76, 175, 79, 0.3) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }   /* 5月: 绿色 */
+        .month-header.month-6 {
+            background: linear-gradient(135deg, rgba(255, 49, 118, 0.7) 0%, rgba(255, 173, 201, 0.6) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        } /* 6月: 粉色 */
+
+        /* 生日特效样式 */
+        @keyframes sparkle {
+            0%, 100% { opacity: 0.7; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.1); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            33% { transform: translateY(-10px) rotate(5deg); }
+            66% { transform: translateY(-5px) rotate(-3deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 5px rgba(255, 152, 0, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 152, 0, 0.6), 0 0 30px rgba(255, 152, 0, 0.4); }
+        }
+
+        @keyframes wave {
+            0%, 100% { box-shadow: 0 0 5px rgba(33, 150, 243, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(33, 150, 243, 0.6), 0 0 30px rgba(33, 150, 243, 0.4); }
+        }
+
+        @keyframes blossom {
+            0%, 100% { box-shadow: 0 0 5px rgba(255, 49, 118, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 49, 118, 0.6), 0 0 30px rgba(255, 49, 118, 0.4); }
+        }
+
+        @keyframes nature {
+            0%, 100% { box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(76, 175, 80, 0.6), 0 0 30px rgba(76, 175, 80, 0.4); }
+        }
+
+        @keyframes hearts {
+            0% { content: "💖"; }
+            25% { content: "💕"; }
+            50% { content: "💗"; }
+            75% { content: "💝"; }
+            100% { content: "💖"; }
+        }
+
+        /* 生日特效类 */
+        .birthday-special-zaki {
+            animation: sparkle 2s ease-in-out infinite, pulse 3s ease-in-out infinite;
+        }
+
+        .birthday-special-ruri {
+            animation: sparkle 2s ease-in-out infinite, wave 3s ease-in-out infinite;
+        }
+
+        .birthday-special-kirarin {
+            animation: sparkle 2s ease-in-out infinite, blossom 3s ease-in-out infinite;
+        }
+
+        .birthday-special-ue {
+            animation: sparkle 2s ease-in-out infinite, nature 3s ease-in-out infinite;
+        }
+
+        /* 生日时的特殊装饰 */
+        .birthday-special-zaki::before,
+        .birthday-special-ruri::before,
+        .birthday-special-kirarin::before,
+        .birthday-special-ue::before {
+            content: "🎉";
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 20px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .birthday-special-zaki::after {
+            content: "🧡";
+            position: absolute;
+            bottom: -5px;
+            left: -5px;
+            font-size: 16px;
+            animation: float 2.5s ease-in-out infinite reverse;
+        }
+
+        .birthday-special-ruri::after {
+            content: "💙";
+            position: absolute;
+            bottom: -5px;
+            left: -5px;
+            font-size: 16px;
+            animation: float 2.5s ease-in-out infinite reverse;
+        }
+
+        .birthday-special-kirarin::after {
+            content: "💖";
+            position: absolute;
+            bottom: -5px;
+            left: -5px;
+            font-size: 16px;
+            animation: float 2.5s ease-in-out infinite reverse;
+        }
+
+        .birthday-special-ue::after {
+            content: "💚";
+            position: absolute;
+            bottom: -5px;
+            left: -5px;
+            font-size: 16px;
+            animation: float 2.5s ease-in-out infinite reverse;
+        }
+
+        /* 特殊日期时两侧边框的透明度提升 */
+        .candy-border-left.birthday-theme,
+        .candy-border-right.birthday-theme {
+            opacity: 0.6;
+            animation: sparkle 4s ease-in-out infinite;
+        }
+
+        /* 全局生日页面特效 */
+        @keyframes fallDown {
+            0% {
+                transform: translateY(-100vh) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pagePulse {
+            0%, 100% {
+                background-color: transparent;
+            }
+            50% {
+                background-color: rgba(255, 152, 0, 0.05);
+            }
+        }
+
+        @keyframes pagePulseBlue {
+            0%, 100% {
+                background-color: transparent;
+            }
+            50% {
+                background-color: rgba(33, 150, 243, 0.05);
+            }
+        }
+
+        @keyframes pagePulsePink {
+            0%, 100% {
+                background-color: transparent;
+            }
+            50% {
+                background-color: rgba(255, 49, 118, 0.05);
+            }
+        }
+
+        @keyframes pagePulseGreen {
+            0%, 100% {
+                background-color: transparent;
+            }
+            50% {
+                background-color: rgba(76, 175, 80, 0.05);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+            }
+            50% {
+                transform: translateY(-20px) scale(1.2);
+            }
+        }
+
+        /* 生日页面特效容器 */
+        .birthday-page-effects {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10000;
+            overflow: hidden;
+        }
+
+        .birthday-emoji-fall {
+            position: absolute;
+            font-size: 30px;
+            animation: fallDown linear infinite;
+            opacity: 0;
+        }
+
+        /* 生日页面背景特效 */
+        body.birthday-zaki-page {
+            animation: pagePulse 3s ease-in-out infinite;
+        }
+
+        body.birthday-ruri-page {
+            animation: pagePulseBlue 3s ease-in-out infinite;
+        }
+
+        body.birthday-kirarin-page {
+            animation: pagePulsePink 3s ease-in-out infinite;
+        }
+
+        body.birthday-ue-page {
+            animation: pagePulseGreen 3s ease-in-out infinite;
+        }
+
+        /* 生日横幅提示 */
+        .birthday-banner {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%);
+            padding: 15px 30px;
+            border-radius: 25px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            z-index: 10001;
+            font-size: 18px;
+            font-weight: bold;
+            animation: bounce 2s ease-in-out infinite;
+            text-align: center;
+        }
+
+        .birthday-banner.zaki {
+            border: 3px solid #FF9800;
+            color: #FF9800;
+        }
+
+        .birthday-banner.ruri {
+            border: 3px solid #2196F3;
+            color: #2196F3;
+        }
+
+        .birthday-banner.kirarin {
+            border: 3px solid #ff3176dc;
+            color: #ff3176dc;
+        }
+
+        .birthday-banner.ue {
+            border: 3px solid #4CAF50;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="candy-border-left" id="leftBorder">🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭</div>
+    <div class="candy-border-right" id="rightBorder">🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭</div>
+
+    <div class="container">
+        <div class="header">
+            <h1>WiSugar Calendar</h1>
+        </div>
+        <div class="controls">
+            <button id="prev-month" disabled>&lt; 上个月</button>
+            <select id="month-selector" aria-label="选择月份">
+                <option value="all">显示全部月份</option>
+                <optgroup label="2022年">
+                    <option value="2022-1">2022年1月</option>
+                    <option value="2022-2">2022年2月</option>
+                    <option value="2022-3">2022年3月</option>
+                    <option value="2022-4">2022年4月</option>
+                    <option value="2022-5">2022年5月</option>
+                    <option value="2022-6">2022年6月</option>
+                    <option value="2022-7">2022年7月</option>
+                    <option value="2022-8">2022年8月</option>
+                    <option value="2022-9">2022年9月</option>
+                    <option value="2022-10">2022年10月</option>
+                    <option value="2022-11">2022年11月</option>
+                    <option value="2022-12">2022年12月</option>
+                </optgroup>
+                <optgroup label="2023年">
+                    <option value="2023-1">2023年1月</option>
+                    <option value="2023-2">2023年2月</option>
+                    <option value="2023-3">2023年3月</option>
+                    <option value="2023-4">2023年4月</option>
+                    <option value="2023-5">2023年5月</option>
+                    <option value="2023-6">2023年6月</option>
+                    <option value="2023-7">2023年7月</option>
+                    <option value="2023-8">2023年8月</option>
+                    <option value="2023-9">2023年9月</option>
+                    <option value="2023-10">2023年10月</option>
+                    <option value="2023-11">2023年11月</option>
+                    <option value="2023-12">2023年12月</option>
+                </optgroup>
+                <optgroup label="2024年">
+                    <option value="2024-1">2024年1月</option>
+                    <option value="2024-2">2024年2月</option>
+                    <option value="2024-3">2024年3月</option>
+                    <option value="2024-4">2024年4月</option>
+                    <option value="2024-5">2024年5月</option>
+                    <option value="2024-6">2024年6月</option>
+                    <option value="2024-7">2024年7月</option>
+                    <option value="2024-8">2024年8月</option>
+                    <option value="2024-9">2024年9月</option>
+                    <option value="2024-10">2024年10月</option>
+                    <option value="2024-11">2024年11月</option>
+                    <option value="2024-12">2024年12月</option>
+                </optgroup>
+                <optgroup label="2025年">
+                    <option value="2025-1">2025年1月</option>
+                    <option value="2025-2">2025年2月</option>
+                    <option value="2025-3">2025年3月</option>
+                    <option value="2025-4">2025年4月</option>
+                    <option value="2025-5">2025年5月</option>
+                    <option value="2025-6">2025年6月</option>
+                    <option value="2025-7">2025年7月</option>
+                    <option value="2025-8">2025年8月</option>
+                </optgroup>
+            </select>
+            <button id="next-month" disabled>&gt; 下个月</button>
+        </div>
+        <div class="calendar-container" id="calendar"></div>
+        
+        <div class="footer-message">
+            在这之后，她们的故事仍在继续...
+        </div>
+    </div>
+
+    <script>
+        // 全局变量 - 只声明一次
+        let calendarData = null;
+        const availableYears = [2022, 2023, 2024, 2025]; // 可用年份列表
+        let currentYear = null; // 不再默认选中特定年份
+        let currentMonth = null;
+        let viewMode = "all";
+        const monthNames = [
+            "一月", "二月", "三月", "四月", "五月", "六月", 
+            "七月", "八月", "九月", "十月", "十一月", "十二月"
+        ];
+        const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
+
+        // 定义可用的年月组合
+        const availableMonths = [];
+        for (let year = 2022; year <= 2025; year++) {
+            const maxMonth = (year === 2025) ? 8 : 12;
+            for (let month = 1; month <= maxMonth; month++) {
+                availableMonths.push({ year, month });
+            }
+        }
+
+        // 生日主题配置
+        const birthdayThemes = {
+            '1-26': {
+                name: 'zaki',
+                leftEmoji: '🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡',
+                rightEmoji: '🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊🧡🍊'
+            },
+            '4-10': {
+                name: 'ruri',
+                leftEmoji: '🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙',
+                rightEmoji: '💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊💙🌊'
+            },
+            '6-15': {
+                name: 'kirarin',
+                leftEmoji: '🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖',
+                rightEmoji: '💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑💖🍑'
+            },
+            '5-16': {
+                name: 'ue',
+                leftEmoji: '🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚',
+                rightEmoji: '💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳💚🌳'
+            }
+        };
+
+        // 使用备用数据
+        function fallbackToBackupData(error) {
+        }
+
+        // 加载日历数据 - 只定义一次
+        function loadCalendarData() {
+            const calendarContainer = document.getElementById('calendar');
+            calendarContainer.innerHTML = '<div style="text-align: center; padding: 20px;">加载中，请稍候...</div>';
+            
+            // 尝试使用fetch API加载JSON文件
+            fetch('calendar_data.json')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.statusText);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    calendarData = data;
+                    console.log("Calendar data loaded successfully");
+                    renderCalendar();
+                })
+                .catch(error => {
+                    console.error('Error loading calendar data:', error);
+                    
+                    // 尝试使用XMLHttpRequest加载
+                    const xhr = new XMLHttpRequest();
+                    xhr.overrideMimeType('application/json');
+                    xhr.open('GET', 'calendar_data.json', true);
+                    
+                    xhr.onload = function() {
+                        if (xhr.status === 200) {
+                            try {
+                                calendarData = JSON.parse(xhr.responseText);
+                                console.log("Calendar data loaded via XHR");
+                                renderCalendar();
+                            } catch(e) {
+                                fallbackToBackupData(e);
+                            }
+                        } else {
+                            fallbackToBackupData(new Error('XHR Status: ' + xhr.status));
+                        }
+                    };
+                    
+                    xhr.onerror = function() {
+                        fallbackToBackupData(new Error('XHR Error'));
+                    };
+                    
+                    xhr.send();
+                });
+        }
+        
+        // 渲染日历
+        function renderCalendar() {
+            if (!calendarData) {
+                console.error("No calendar data available");
+                return;
+            }
+            
+            const calendarContainer = document.getElementById('calendar');
+            
+            // 保留警告消息（如果有）
+            const warning = calendarContainer.querySelector('div[style*="fff3cd"]');
+            calendarContainer.innerHTML = '';
+            if (warning) {
+                calendarContainer.appendChild(warning);
+            }
+
+            if (viewMode === 'all') {
+                calendarContainer.classList.remove('single-month-view');
+                // 渲染所有年份的所有月份
+                for (const year of availableYears) {
+                    if (calendarData[year]) {
+                        const maxMonth = (year === 2025) ? 8 : 12;
+                        for (let month = 1; month <= maxMonth; month++) {
+                            renderMonth(year, month);
+                        }
+                    }
+                }
+            } else {
+                calendarContainer.classList.add('single-month-view');
+                // 渲染特定年月
+                renderMonth(currentYear, currentMonth);
+            }
+        }
+
+        // 渲染单个月份
+        function renderMonth(year, month) {
+            const calendarContainer = document.getElementById('calendar');
+            const yearData = calendarData[year] || {};
+            const monthData = yearData[month] || {};
+            
+            // 如果这个月没有数据，不渲染
+            if (Object.keys(monthData).length === 0) {
+                return;
+            }
+            
+            // 创建月份容器
+            const monthElement = document.createElement('div');
+            monthElement.className = 'month';
+            
+            // 月份标题
+            const monthHeader = document.createElement('div');
+            monthHeader.className = `month-header year-${year} month-${month}`;
+            
+            // 为2023年7月添加特殊类
+            if (year === 2023 && month === 7) {
+                monthHeader.classList.add('month-7');
+            }
+            
+            // 特殊标题：2023年7月 “ずっとあいしてるよ”
+            if (year === 2023 && month === 7) {
+                monthHeader.textContent = `${year}年${month}月 ずっとあいしてるよ`;
+            } else {
+                monthHeader.textContent = `${year}年 ${monthNames[month-1]}`;
+            }
+            monthElement.appendChild(monthHeader);
+            
+            // 星期标题
+            const daysHeader = document.createElement('div');
+            daysHeader.className = 'days-header';
+            dayNames.forEach(day => {
+                const dayHeader = document.createElement('div');
+                dayHeader.textContent = day;
+                daysHeader.appendChild(dayHeader);
+            });
+            monthElement.appendChild(daysHeader);
+            
+            // 日期格子
+            const daysGrid = document.createElement('div');
+            daysGrid.className = 'days-grid';
+            
+            // 计算每月1号是星期几 (0是星期日)
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            
+            // 添加空白格子
+            for (let i = 0; i < firstDay; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day empty';
+                daysGrid.appendChild(emptyDay);
+            }
+            
+            // 获取月份的总天数
+            const daysInMonth = new Date(year, month, 0).getDate();
+            
+            // 添加日期格子
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day';
+                
+                // 添加日期
+                const dayNumber = document.createElement('div');
+                dayNumber.className = 'day-number';
+                dayNumber.textContent = day;
+                dayElement.appendChild(dayNumber);
+                
+                // 检查是否有这一天的数据
+                if (monthData[day]) {
+                    const dayData = monthData[day];
+                    
+                    // 处理 birthdaySP 属性
+                    if (dayData.birthdaySP && dayData.birthdaySP !== 'None') {
+                        const birthdays = dayData.birthdaySP.split('/').map(name => name.trim());
+                        
+                        if (birthdays.length === 1) {
+                            // 单个生日
+                            const name = birthdays[0].toLowerCase();
+                            dayElement.classList.add(`birthday-${name}`);
+                        } else if (birthdays.length === 2) {
+                            // 两个生日 - 使用组合样式
+                            birthdays.forEach(name => {
+                                dayElement.classList.add(`birthday-${name.toLowerCase()}`);
+                            });
+                        } else if (birthdays.length === 3) {
+                            // 三个生日
+                            dayElement.classList.add('birthday-multi-3');
+                            const colors = birthdays.map(name => {
+                                const colorMap = {
+                                    'zaki': '#FF9800',
+                                    'ruri': '#2196F3',
+                                    'ue': '#4CAF50',
+                                    'kirarin': '#ff3176dc',
+                                    'netanuki': '#9C27B0',
+                                    'mi': '#fffd81'
+                                };
+                                return colorMap[name.toLowerCase()] || '#999';
+                            });
+                            dayElement.style.borderImage = `linear-gradient(135deg, ${colors[0]} 0%, ${colors[0]} 33.33%, ${colors[1]} 33.33%, ${colors[1]} 66.66%, ${colors[2]} 66.66%, ${colors[2]} 100%) 1`;
+                        } else {
+                            // 四个或更多生日
+                            dayElement.classList.add('birthday-multi-4plus');
+                            const colors = birthdays.map(name => {
+                                const colorMap = {
+                                    'zaki': '#FF9800',
+                                    'ruri': '#2196F3',
+                                    'ue': '#4CAF50',
+                                    'kirarin': '#ff3176dc',
+                                    'netanuki': '#9C27B0',
+                                    'mi': '#fffd81'
+                                };
+                                return colorMap[name.toLowerCase()] || '#999';
+                            });
+                            const gradientStops = colors.map((color, i) => {
+                                const percent = (i / colors.length * 100).toFixed(2);
+                                const nextPercent = ((i + 1) / colors.length * 100).toFixed(2);
+                                return `${color} ${percent}%, ${color} ${nextPercent}%`;
+                            }).join(', ');
+                            dayElement.style.borderImage = `linear-gradient(135deg, ${gradientStops}) 1`;
+                        }
+                    }
+                    
+                    // 按照要求设置背景颜色
+                    if (dayData.isEvent) {
+                        dayElement.classList.add('is-event');
+                    }
+                    
+                    if (dayData.canceledEvent) {
+                        dayElement.classList.add('canceled-event');
+                    }
+                    
+                    if (dayData.specialEvent && dayData.specialEvent !== 'None') {
+                        const specialEvent = document.createElement('div');
+                        specialEvent.className = 'special-event';
+                        specialEvent.textContent = dayData.specialEvent;
+                        dayElement.appendChild(specialEvent);
+                    }
+                    
+                    if (dayData.isEvent && dayData.eventPlace && dayData.eventPlace !== 'None') {
+                        const eventPlace = document.createElement('div');
+                        eventPlace.className = 'event-place';
+                        eventPlace.textContent = dayData.eventPlace;
+                        dayElement.appendChild(eventPlace);
+                    }
+                    
+                    const weibo = dayData.weibo || [];
+                    const bilibili = dayData.bilibili || [];
+                    const hasLinks = (weibo.length > 0) || (bilibili.length > 0);
+                    
+                    if (hasLinks) {
+                        dayElement.classList.add('has-links');
+                        dayElement.setAttribute('data-weibo', JSON.stringify(weibo));
+                        dayElement.setAttribute('data-bilibili', JSON.stringify(bilibili));
+                        
+                        const socialIconsContainer = document.createElement('div');
+                        socialIconsContainer.className = 'social-icons';
+                        
+                        if (weibo.length > 0) {
+                            const weiboIcon = document.createElement('img');
+                            weiboIcon.className = 'social-icon';
+                            weiboIcon.src = 'imgs/weibo.png';
+                            weiboIcon.alt = '微博';
+                            socialIconsContainer.appendChild(weiboIcon);
+                        }
+                        
+                        if (bilibili.length > 0) {
+                            const bilibiliIcon = document.createElement('img');
+                            bilibiliIcon.className = 'social-icon';
+                            bilibiliIcon.src = 'imgs/bilibili.png';
+                            bilibiliIcon.alt = '哔哩哔哩';
+                            socialIconsContainer.appendChild(bilibiliIcon);
+                        }
+                        
+                        dayElement.appendChild(socialIconsContainer);
+                        
+                        dayElement.addEventListener('click', function() {
+                            openLinksPage(
+                                JSON.parse(this.getAttribute('data-weibo')),
+                                JSON.parse(this.getAttribute('data-bilibili'))
+                            );
+                        });
+                    }
+                }
+                
+                daysGrid.appendChild(dayElement);
+            }
+            
+            monthElement.appendChild(daysGrid);
+            calendarContainer.appendChild(monthElement);
+        }
+
+        // 打开链接页面
+        function openLinksPage(weiboLinks, bilibiliLinks) {
+            const newWindow = window.open('', '_blank');
+            if (!newWindow) {
+                alert('无法打开新窗口，请检查浏览器弹窗设置');
+                return;
+            }
+            
+            const doc = newWindow.document;
+            doc.open();
+            doc.write('<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">');
+            doc.write('<meta name="viewport" content="width=device-width, initial-scale=1.0">');
+            doc.write('<title>那一天从糖星传来的讯号<\/title>');
+            doc.write('<style>');
+            doc.write('body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }');
+            doc.write('h1, h2 { color: #4CAF50; }');
+            doc.write('.links-container { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }');
+            doc.write('.link-item { margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-left: 4px solid #4CAF50; border-radius: 4px; }');
+            doc.write('.link-url { margin-bottom: 10px; }');
+            doc.write('.link-url a { color: #2196F3; text-decoration: none; font-weight: bold; word-break: break-all; }');
+            doc.write('.link-url a:hover { text-decoration: underline; }');
+            doc.write('.preview-container { position: relative; width: 100%; height: 400px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; background-color: white; }');
+            doc.write('.preview-iframe { width: 100%; height: 100%; border: none; }');
+            doc.write('.preview-loading { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #666; }');
+            doc.write('.preview-error { padding: 20px; text-align: center; color: #666; }');
+            doc.write('.weibo-card { background: linear-gradient(135deg, #FFB5CA 0%, #FFD9C4 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin-top: 10px; min-height: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center; }');
+            doc.write('.weibo-card-icon { font-size: 48px; margin-bottom: 15px; }');
+            doc.write('.weibo-card-title { font-size: 20px; font-weight: bold; margin-bottom: 10px; }');
+            doc.write('.weibo-card-desc { font-size: 14px; opacity: 0.9; margin-bottom: 20px; }');
+            doc.write('.weibo-card-notice { font-size: 12px; opacity: 0.8; background-color: rgba(255,255,255,0.2); padding: 8px 12px; border-radius: 4px; margin-top: 10px; }');
+            doc.write('.open-link-btn { display: inline-block; background-color: #2196F3; color: white; padding: 10px 20px; border: none; border-radius: 4px; margin-top: 10px; cursor: pointer; text-decoration: none; font-size: 14px; transition: background-color 0.3s; }');
+            doc.write('.open-link-btn:hover { background-color: #0b7dda; }');
+            doc.write('.open-link-btn.weibo-btn { background-color: white; color: #ff8a00; font-weight: bold; }');
+            doc.write('.open-link-btn.weibo-btn:hover { background-color: #f5f5f5; }');
+            doc.write('.back-button { display: inline-block; background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; margin-top: 20px; cursor: pointer; font-size: 14px; }');
+            doc.write('.back-button:hover { background-color: #45a049; }');
+            doc.write('@media (max-width: 768px) { .preview-container { height: 300px; } .weibo-card { padding: 20px; min-height: 120px; } .weibo-card-icon { font-size: 36px; } }');
+            doc.write('<\/style><\/head><body>');
+            doc.write('<h1>那一天从糖星传来的讯号<\/h1>');
+            
+            // 添加微博链接 - 使用卡片样式
+            if (weiboLinks && weiboLinks.length > 0) {
+                doc.write('<div class="links-container"><h2>📱 微博链接<\/h2>');
+                for (let i = 0; i < weiboLinks.length; i++) {
+                    doc.write('<div class="link-item">');
+                    doc.write('<div class="link-url"><a href="' + weiboLinks[i] + '" target="_blank">' + weiboLinks[i] + '<\/a><\/div>');
+                    doc.write('<div class="weibo-card">');
+                    doc.write('<div class="weibo-card-icon">🔗<\/div>');
+                    doc.write('<div class="weibo-card-title">WiSugar 微博内容<\/div>');
+                    doc.write('<div class="weibo-card-desc">点击下方按钮在新窗口查看完整微博内容<\/div>');
+                    doc.write('<a href="' + weiboLinks[i] + '" target="_blank" class="open-link-btn weibo-btn">📱 打开微博<\/a>');
+                    doc.write('<div class="weibo-card-notice">💡 由于微博安全策略，无法直接嵌入预览<\/div>');
+                    doc.write('<\/div>');
+                    doc.write('<\/div>');
+                }
+                doc.write('<\/div>');
+            }
+            
+            // 添加B站链接 - 保持iframe预览
+            if (bilibiliLinks && bilibiliLinks.length > 0) {
+                doc.write('<div class="links-container"><h2>📺 哔哩哔哩链接<\/h2>');
+                for (let j = 0; j < bilibiliLinks.length; j++) {
+                    const linkId = 'bilibili-' + j;
+                    doc.write('<div class="link-item">');
+                    doc.write('<div class="link-url"><a href="' + bilibiliLinks[j] + '" target="_blank">' + bilibiliLinks[j] + '<\/a><\/div>');
+                    doc.write('<div class="preview-container" id="' + linkId + '-container">');
+                    doc.write('<div class="preview-loading">⏳ 加载预览中...</div>');
+                    doc.write('<iframe class="preview-iframe" id="' + linkId + '" data-src="' + bilibiliLinks[j] + '" sandbox="allow-same-origin allow-scripts allow-popups allow-forms" allowfullscreen><\/iframe>');
+                    doc.write('<\/div>');
+                    doc.write('<a href="' + bilibiliLinks[j] + '" target="_blank" class="open-link-btn">🔗 在新窗口打开<\/a>');
+                    doc.write('<\/div>');
+                }
+                doc.write('<\/div>');
+            }
+            
+            doc.write('<button class="back-button" id="closeBtn">✖️ 关闭窗口<\/button>');
+            
+            // 添加脚本处理iframe加载（仅针对B站）
+            doc.write('<script>');
+            doc.write('window.onload = function() {');
+            doc.write('  const closeBtn = document.getElementById("closeBtn");');
+            doc.write('  if (closeBtn) {');
+            doc.write('    closeBtn.addEventListener("click", function() { window.close(); });');
+            doc.write('  }');
+            doc.write('  ');
+            doc.write('  const iframes = document.querySelectorAll(".preview-iframe");');
+            doc.write('  iframes.forEach(function(iframe, index) {');
+            doc.write('    const container = iframe.parentElement;');
+            doc.write('    const loading = container.querySelector(".preview-loading");');
+            // FIX: use double quotes inside single-quoted doc.write string
+            doc.write('    const url = iframe.getAttribute("data-src");');
+            doc.write('    ');
+            doc.write('    iframe.onload = function() {');
+            doc.write('      if (loading) loading.style.display = "none";');
+            doc.write('    };');
+            doc.write('    ');
+            doc.write('    iframe.onerror = function() {');
+            doc.write('      container.innerHTML = "<div class=\\"preview-error\\">❌ 无法加载预览<br><small>由于跨域限制，某些网站无法直接预览</small></div>";');
+            doc.write('    };');
+            doc.write('    ');
+            doc.write('    setTimeout(function() {');
+            doc.write('      iframe.src = url;');
+            doc.write('    }, 100 * index);');
+            doc.write('  });');
+            doc.write('};');
+            doc.write('<\/script>');
+            
+            doc.write('<\/body><\/html>');
+            doc.close();
+        }
+        
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', function() {
+            // 检查并应用生日特效（基于系统日期）
+            checkAndApplyBirthdayEffects();
+            
+            // 设置边框主题
+            setBorderTheme();
+            
+            // 从文件加载日历数据
+            loadCalendarData();
+            
+            // 每分钟检查一次日期变化（以防跨日期）
+            setInterval(checkAndApplyBirthdayEffects, 60000);
+            
+            const monthSelector = document.getElementById('month-selector');
+            const prevMonthBtn = document.getElementById('prev-month');
+            const nextMonthBtn = document.getElementById('next-month');
+
+            // 月份选择事件
+            monthSelector.addEventListener('change', function() {
+                const value = this.value;
+                
+                if (value === 'all') {
+                    viewMode = 'all';
+                    currentYear = null;
+                    currentMonth = null;
+                    renderCalendar();
+                    prevMonthBtn.disabled = true;
+                    nextMonthBtn.disabled = true;
+                } else {
+                    viewMode = 'single';
+                    const [year, month] = value.split('-').map(Number);
+                    currentYear = year;
+                    currentMonth = month;
+                    renderCalendar();
+                    updateNavigationButtons();
+                }
+            });
+
+            // 上个月按钮
+            prevMonthBtn.addEventListener('click', function() {
+                const currentIndex = availableMonths.findIndex(
+                    m => m.year === currentYear && m.month === currentMonth
+                );
+                
+                if (currentIndex > 0) {
+                    const prev = availableMonths[currentIndex - 1];
+                    currentYear = prev.year;
+                    currentMonth = prev.month;
+                    monthSelector.value = `${currentYear}-${currentMonth}`;
+                    renderCalendar();
+                    updateNavigationButtons();
+                }
+            });
+
+            // 下个月按钮
+            nextMonthBtn.addEventListener('click', function() {
+                const currentIndex = availableMonths.findIndex(
+                    m => m.year === currentYear && m.month === currentMonth
+                );
+                
+                if (currentIndex < availableMonths.length - 1) {
+                    const next = availableMonths[currentIndex + 1];
+                    currentYear = next.year;
+                    currentMonth = next.month;
+                    monthSelector.value = `${currentYear}-${currentMonth}`;
+                    renderCalendar();
+                    updateNavigationButtons();
+                }
+            });
+
+            function updateNavigationButtons() {
+                if (viewMode === 'all') {
+                    prevMonthBtn.disabled = true;
+                    nextMonthBtn.disabled = true;
+                    return;
+                }
+                
+                const currentIndex = availableMonths.findIndex(
+                    m => m.year === currentYear && m.month === currentMonth
+                );
+                
+                prevMonthBtn.disabled = currentIndex <= 0;
+                nextMonthBtn.disabled = currentIndex >= availableMonths.length - 1;
+            }
+        });
+
+        // 检查指定日期是否为特殊生日
+        function checkBirthdayTheme(month, day) {
+            if (month && day) {
+                const dateKey = `${month}-${day}`;
+                if (birthdayThemes[dateKey]) {
+                    return birthdayThemes[dateKey];
+                }
+            }
+            return null;
+        }
+
+        // 设置边框主题（基于系统日期）
+        function setBorderTheme() {
+            const leftBorder = document.getElementById('leftBorder');
+            const rightBorder = document.getElementById('rightBorder');
+            
+            if (!leftBorder || !rightBorder) {
+                return;
+            }
+            
+            // 始终基于当前系统日期
+            const today = new Date();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
+            const theme = checkBirthdayTheme(month, day);
+            
+            if (theme) {
+                // 应用生日主题
+                leftBorder.textContent = theme.leftEmoji;
+                rightBorder.textContent = theme.rightEmoji;
+                leftBorder.classList.add('birthday-theme');
+                rightBorder.classList.add('birthday-theme');
+            } else {
+                // 使用默认糖果主题
+                leftBorder.textContent = '🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭';
+                rightBorder.textContent = '🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭🍬🍭';
+                leftBorder.classList.remove('birthday-theme');
+                rightBorder.classList.remove('birthday-theme');
+            }
+        }
+
+        // 创建飘落的emoji特效
+        function createFallingEmoji(emoji, delay, duration) {
+            const emojiElement = document.createElement('div');
+            emojiElement.className = 'birthday-emoji-fall';
+            emojiElement.textContent = emoji;
+            emojiElement.style.left = Math.random() * 100 + '%';
+            emojiElement.style.animationDelay = delay + 's';
+            emojiElement.style.animationDuration = duration + 's';
+            return emojiElement;
+        }
+
+        // 应用全局生日页面特效
+        function applyBirthdayPageEffects(birthdayName) {
+            // 移除之前的特效
+            removeBirthdayPageEffects();
+            
+            // 移除body上所有生日类
+            document.body.classList.remove('birthday-zaki-page', 'birthday-ruri-page', 'birthday-kirarin-page', 'birthday-ue-page');
+            
+            // 添加对应的body类
+            document.body.classList.add(`birthday-${birthdayName}-page`);
+            
+            // 创建特效容器
+            const effectsContainer = document.createElement('div');
+            effectsContainer.className = 'birthday-page-effects';
+            effectsContainer.id = 'birthdayEffects';
+            document.body.appendChild(effectsContainer);
+            
+            // 根据不同的生日创建不同的emoji和横幅
+            let emojis = [];
+            let bannerText = '';
+            let bannerClass = '';
+            
+            switch(birthdayName) {
+                case 'zaki':
+                    emojis = ['🍊', '🧡', '🎉', '✨', '🌟'];
+                    bannerText = '🎂 祝 Zaki 生日快乐！🎂';
+                    bannerClass = 'zaki';
+                    break;
+                case 'ruri':
+                    emojis = ['🌊', '💙', '🎉', '✨', '🌟'];
+                    bannerText = '🎂 祝 Ruri 生日快乐！🎂';
+                    bannerClass = 'ruri';
+                    break;
+                case 'kirarin':
+                    emojis = ['🍑', '💖', '🎉', '✨', '🌟'];
+                    bannerText = '🎂 祝 Kirarin 生日快乐！🎂';
+                    bannerClass = 'kirarin';
+                    break;
+                case 'ue':
+                    emojis = ['🌳', '💚', '🎉', '✨', '🌟'];
+                    bannerText = '🎂 祝 Ue 生日快乐！🎂';
+                    bannerClass = 'ue';
+                    break;
+            }
+            
+            // 创建生日横幅
+            const banner = document.createElement('div');
+            banner.className = `birthday-banner ${bannerClass}`;
+            banner.textContent = bannerText;
+            document.body.appendChild(banner);
+            
+            // 创建飘落的emoji
+            for (let i = 0; i < 20; i++) {
+                const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                const delay = Math.random() * 5;
+                const duration = 5 + Math.random() * 5;
+                const emojiElement = createFallingEmoji(emoji, delay, duration);
+                effectsContainer.appendChild(emojiElement);
+            }
+            
+            // 持续添加新的emoji
+            const emojiInterval = setInterval(() => {
+                if (!document.getElementById('birthdayEffects')) {
+                    clearInterval(emojiInterval);
+                    return;
+                }
+                const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+                const delay = 0;
+                const duration = 5 + Math.random() * 5;
+                const emojiElement = createFallingEmoji(emoji, delay, duration);
+                effectsContainer.appendChild(emojiElement);
+                
+                // 限制emoji数量，移除旧的
+                const allEmojis = effectsContainer.querySelectorAll('.birthday-emoji-fall');
+                if (allEmojis.length > 30) {
+                    allEmojis[0].remove();
+                }
+            }, 1000);
+        }
+
+        // 移除全局生日页面特效
+        function removeBirthdayPageEffects() {
+            const effectsContainer = document.getElementById('birthdayEffects');
+            if (effectsContainer) {
+                effectsContainer.remove();
+            }
+            const banner = document.querySelector('.birthday-banner');
+            if (banner) {
+                banner.remove();
+            }
+            document.body.classList.remove('birthday-zaki-page', 'birthday-ruri-page', 'birthday-kirarin-page', 'birthday-ue-page');
+        }
+
+        // 检查并应用生日特效
+        function checkAndApplyBirthdayEffects() {
+            const today = new Date();
+            const month = today.getMonth() + 1;
+            const day = today.getDate();
+            const theme = checkBirthdayTheme(month, day);
+            
+            if (theme) {
+                applyBirthdayPageEffects(theme.name);
+            } else {
+                removeBirthdayPageEffects();
+            }
+            
+            // 同时更新边框主题
+            setBorderTheme();
+        }
+    </script>
+</body>
+</html>
