@@ -539,12 +539,39 @@
                 padding-left: 35px; /* 为左侧emoji边框留出空间 */
                 padding-right: 35px; /* 为右侧emoji边框留出空间 */
             }
-            .month {
+            .container {
+                width: 100%;
                 max-width: 100%;
+                box-sizing: border-box;
+                padding: 0;
+                margin: 0;
+            }
+            .month {
+                width: calc(100vw - 70px); /* 视口宽度减去左右padding */
+                max-width: calc(100vw - 70px);
+                box-sizing: border-box;
+            }
+            .days-header {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .days-header div {
+                padding: 8px 2px; /* 减少左右padding以节省空间 */
+                font-size: 0.9em;
+            }
+            .days-grid {
+                display: grid;
+                grid-template-columns: repeat(7, 1fr);
+                width: 100%;
+                box-sizing: border-box;
             }
             .day {
                 min-height: 60px;
-                padding: 5px;
+                padding: 5px 2px; /* 减少左右padding以节省空间 */
+                min-width: 0; /* 允许grid列缩小 */
+                box-sizing: border-box;
             }
             .day-number {
                 font-size: 0.9em;
